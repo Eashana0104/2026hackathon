@@ -11,6 +11,20 @@ The goal of this module is to produce some visual aspect of your company that th
 
 If you have any design documents or business documents, please point to them here 
 
-## Installation Instructions
+## AtmosAI Marketing Website
 
-If you are creating a web app and have running instructions, please put them here. We recommend creating a web app through `npm create vite@latest` so that we can easily run it by running npm start.
+A modern React landing page for **AtmosAI** — *"TVs can feel the crowd"* — showcasing how the platform transforms venue screens into intelligent, crowd-aware displays.
+
+### Installation & run
+
+```bash
+cd website
+npm install
+npm start
+```
+
+Then open [http://localhost:5173](http://localhost:5173) in your browser.
+
+- **`npm start`** or **`npm run dev`** — start the development server  
+- **`npm run build`** — build for production  
+- **`npm run preview`** — preview the production build locally

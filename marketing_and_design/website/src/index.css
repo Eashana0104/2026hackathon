@@ -1,0 +1,61 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-deep: #0a0a0f;
+  --bg-card: #12121a;
+  --bg-elevated: #1a1a26;
+  --text: #b4b4c4;
+  --text-bright: #e8e8f0;
+  --text-muted: #6b6b80;
+  --accent-cyan: #00d4aa;
+  --accent-violet: #8b5cf6;
+  --accent-pink: #ec4899;
+  --gradient-hero: linear-gradient(135deg, #00d4aa 0%, #06b6d4 40%, #8b5cf6 70%, #ec4899 100%);
+  --gradient-glow: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 212, 170, 0.25), transparent);
+  --font-heading: 'Syne', system-ui, sans-serif;
+  --font-body: 'Outfit', system-ui, sans-serif;
+  --radius: 16px;
+  --radius-lg: 24px;
+  --transition: 0.25s ease;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg-deep);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--text-bright);
+  margin: 0;
+}
+
+a {
+  color: var(--accent-cyan);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+a:hover {
+  color: var(--accent-violet);
+}
