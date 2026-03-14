@@ -67,12 +67,106 @@ export class RouteOptimizer {
         boxes: Box[],
         routeIds: string[]
     ): number | null {
-        // TODO: implement this method
-        throw new Error('Not implemented');
+        // If we don't visit any boxes, the technician never leaves home.
+        if (routeIds.length === 0) {
+            return 0;
+        }
+
+        // Keep a quick lookup from box id to its data.
+        const boxMap = new Map<string, Box>(boxes.map((b) => [b.id, b]));
+
+        let totalDistance = 0;
+        let currentLocation: Location = technician.startLocation;
+        const visited = new Set<string>();
+
+        for (const id of routeIds) {
+            const box = boxMap.get(id);
+            if (!box) {
+                // If the route mentions a box we don't know about, bail out.
+                return null;
+            }
+
+            // If we loop over the same ID again, don't double‑charge the distance.
+            if (!visited.has(id)) {
+                const dist = this.haversineDistance(currentLocation, box.location);
+                totalDistance += dist;
+                currentLocation = box.location;
+                visited.add(id);
+            }
+        }
+
+        return totalDistance;
     }
 
     findShortestRoute(technician: Technician, boxes: Box[]): RouteResult {
-        // TODO: implement this method
-        throw new Error('Not implemented');
+        // No broken boxes today: nothing to plan.
+        if (boxes.length === 0) {
+            return {
+                technicianId: technician.id,
+                route: [],
+                totalDistanceKm: 0,
+            };
+        }
+
+        // With only one box, the "shortest route" is obvious.
+        if (boxes.length === 1) {
+            const only = boxes[0];
+            const distance = this.calculateRouteDistance(
+                technician,
+                boxes,
+                [only.id]
+            ) ?? 0;
+
+            return {
+                technicianId: technician.id,
+                route: [only.id],
+                totalDistanceKm: distance,
+            };
+        }
+
+        // Greedy nearest‑neighbour:
+        // from wherever we are, walk to the closest unvisited box next.
+        // When two options are equally far, pick the one with the smaller ID
+        // so the result is deterministic.
+        const unvisited = new Set<string>(boxes.map((b) => b.id));
+        const boxMap = new Map<string, Box>(boxes.map((b) => [b.id, b]));
+        let currentLocation: Location = technician.startLocation;
+        const route: string[] = [];
+
+        while (unvisited.size > 0) {
+            let bestId: string | null = null;
+            let bestDistance = Infinity;
+
+            for (const id of unvisited) {
+                const box = boxMap.get(id)!;
+                const dist = this.haversineDistance(currentLocation, box.location);
+
+                if (
+                    dist < bestDistance ||
+                    (dist === bestDistance && bestId !== null && id < bestId)
+                ) {
+                    bestDistance = dist;
+                    bestId = id;
+                }
+            }
+
+            if (bestId === null) {
+                break;
+            }
+
+            route.push(bestId);
+            const box = boxMap.get(bestId)!;
+            currentLocation = box.location;
+            unvisited.delete(bestId);
+        }
+
+        const totalDistance =
+            this.calculateRouteDistance(technician, boxes, route) ?? 0;
+
+        return {
+            technicianId: technician.id,
+            route,
+            totalDistanceKm: totalDistance,
+        };
     }
 }

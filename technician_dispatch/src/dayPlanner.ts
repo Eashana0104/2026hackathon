@@ -84,12 +84,156 @@ export class DayPlanner {
         boxes: Box[],
         routeIds: string[]
     ): number | null {
-        // TODO: implement this method
-        throw new Error('Not implemented');
+        // No planned stops means we spend no time on the road.
+        if (routeIds.length === 0) {
+            return 0;
+        }
+
+        if (boxes.length === 0) {
+            return null;
+        }
+
+        const boxMap = new Map<string, Box>(boxes.map((b) => [b.id, b]));
+
+        // Keep track of how long the technician has been busy so far.
+        let totalMinutes = 0;
+        let currentLocation: Location = technician.startLocation;
+
+        for (const id of routeIds) {
+            const box = boxMap.get(id);
+            if (!box) {
+                return null;
+            }
+
+            const travel = this.travelTimeMinutes(
+                currentLocation,
+                box.location,
+                technician.speedKmh
+            );
+
+            totalMinutes += travel + box.fixTimeMinutes;
+            currentLocation = box.location;
+        }
+
+        return totalMinutes;
     }
 
     planDay(technician: Technician, boxes: Box[]): DayPlanResult {
-        // TODO: implement this method
-        throw new Error('Not implemented');
+        // If there are no boxes, the technician's day is empty but valid.
+        if (boxes.length === 0) {
+            return {
+                technicianId: technician.id,
+                plannedRoute: [],
+                totalTimeUsedMinutes: 0,
+                boxesFixed: 0,
+                skippedBoxIds: [],
+            };
+        }
+
+        const workingLimit = technician.workingMinutes;
+
+        // Given a chosen subset of boxes, build a route that keeps travel
+        // short by always walking to the nearest unvisited box next.
+        const buildGreedyRoute = (selected: Box[]): string[] => {
+            if (selected.length === 0) return [];
+
+            const boxMap = new Map<string, Box>(selected.map((b) => [b.id, b]));
+            const unvisited = new Set<string>(selected.map((b) => b.id));
+
+            let currentLocation: Location = technician.startLocation;
+            const route: string[] = [];
+
+            while (unvisited.size > 0) {
+                let bestId: string | null = null;
+                let bestDistance = Infinity;
+
+                for (const id of unvisited) {
+                    const box = boxMap.get(id)!;
+                    const dist = this.haversineDistance(
+                        currentLocation,
+                        box.location
+                    );
+
+                    if (
+                        dist < bestDistance ||
+                        (dist === bestDistance && bestId !== null && id < bestId)
+                    ) {
+                        bestDistance = dist;
+                        bestId = id;
+                    }
+                }
+
+                if (bestId === null) {
+                    break;
+                }
+
+                route.push(bestId);
+                const box = boxMap.get(bestId)!;
+                currentLocation = box.location;
+                unvisited.delete(bestId);
+            }
+
+            return route;
+        };
+
+        // First guess which boxes are "cheap" to handle:
+        // approximate cost = travel from start + fix time. When two boxes cost
+        // about the same, sort by ID so the behaviour stays predictable.
+        const sortedCandidates = [...boxes].sort((a, b) => {
+            const travelA = this.travelTimeMinutes(
+                technician.startLocation,
+                a.location,
+                technician.speedKmh
+            );
+            const travelB = this.travelTimeMinutes(
+                technician.startLocation,
+                b.location,
+                technician.speedKmh
+            );
+
+            const costA = travelA + a.fixTimeMinutes;
+            const costB = travelB + b.fixTimeMinutes;
+
+            if (costA !== costB) {
+                return costA - costB;
+            }
+
+            return a.id.localeCompare(b.id);
+        });
+
+        let selected: Box[] = [];
+        let bestRoute: string[] = [];
+        let bestDuration = 0;
+
+        for (const candidate of sortedCandidates) {
+            const tentative = [...selected, candidate];
+            const tentativeRoute = buildGreedyRoute(tentative);
+            const duration = this.calculateRouteDuration(
+                technician,
+                boxes,
+                tentativeRoute
+            );
+
+            if (duration !== null && duration <= workingLimit) {
+                selected = tentative;
+                bestRoute = tentativeRoute;
+                bestDuration = duration;
+            }
+        }
+
+        const plannedRoute = bestRoute;
+        const totalTimeUsedMinutes = bestDuration;
+        const plannedSet = new Set(plannedRoute);
+        const skippedBoxIds = boxes
+            .map((b) => b.id)
+            .filter((id) => !plannedSet.has(id));
+
+        return {
+            technicianId: technician.id,
+            plannedRoute,
+            totalTimeUsedMinutes,
+            boxesFixed: plannedRoute.length,
+            skippedBoxIds,
+        };
     }
 }
